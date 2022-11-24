@@ -13,7 +13,7 @@ from src.unet import ContextualUnet
 
 def main(config):
     ws_test = [0.0, 0.5, 2.0]  # strength of generative guidance
-    device = torch.device('cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print("Training will happen on : ", device)
 
     model = ContextualUnet(in_channels=1, n_feat=config["N_FEAT"], n_classes=config["N_CLASSES"])
