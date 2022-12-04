@@ -1,8 +1,8 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import yaml
 from torch.utils.data import DataLoader
-import matplotlib.pyplot as plt
 
 from src.ddpm import DDPM
 from src.sin_dataset import SineDataset
@@ -21,7 +21,8 @@ def main(config):
 
     # transform = transforms.Compose([transforms.ToTensor()])
 
-    dataset = SineDataset(window_size=24, transform=None, omega=np.pi / 24, n_classes=config["N_CLASSES"])
+    dataset = SineDataset(window_size=24, transform=None, omega=np.pi / 24, n_classes=config["N_CLASSES"],
+                          amplitude=0.96)
     train_loader = DataLoader(dataset, batch_size=config["BATCH_SIZE"])
     optim = torch.optim.Adam(ddpm.parameters(), lr=config["LEARNING_RATE"])
     print("Start")
