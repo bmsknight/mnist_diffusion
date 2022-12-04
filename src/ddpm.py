@@ -75,7 +75,50 @@ class DDPM(nn.Module):
         # where w>0 means more guidance
 
         x_i = torch.randn(n_sample, *size).to(device)  # x_T ~ N(0, 1), sample initial noise
-        c_i = torch.arange(0, self.nn_model.n_classes).to(device)  # context for us just cycles throught the mnist labels
+        c_i = torch.arange(0, self.nn_model.n_classes).to(
+            device)  # context for us just cycles throught the mnist labels
+        c_i = c_i.repeat(int(n_sample / c_i.shape[0]))
+
+        # don't drop context at test time
+        context_mask = torch.zeros_like(c_i).to(device)
+
+        # double the batch
+        c_i = c_i.repeat(2)
+        context_mask = context_mask.repeat(2)
+        context_mask[n_sample:] = 1.  # makes second half of batch context free
+
+        x_i_store = []  # keep track of generated steps in case want to plot something
+        print()
+        for i in range(self.n_T, 0, -1):
+            print(f'sampling timestep {i}', end='\r')
+            t_is = torch.tensor([i / self.n_T]).to(device)
+            t_is = t_is.repeat(n_sample, 1, 1)
+
+            # double batch
+            x_i = x_i.repeat(2, 1, 1)
+            t_is = t_is.repeat(2, 1, 1)
+
+            z = torch.randn(n_sample, *size).to(device) if i > 1 else 0
+
+            # split predictions and compute weighting
+            eps = self.nn_model(x_i, c_i, t_is, context_mask)
+            eps1 = eps[:n_sample]
+            eps2 = eps[n_sample:]
+            eps = (1 + guide_w) * eps1 - guide_w * eps2
+            x_i = x_i[:n_sample]
+            x_i = (
+                    self.oneover_sqrta[i] * (x_i - eps * self.mab_over_sqrtmab[i])
+                    + self.sqrt_beta_t[i] * z
+            )
+            if i % 20 == 0 or i == self.n_T or i < 8:
+                x_i_store.append(x_i.detach().cpu().numpy())
+
+        x_i_store = np.array(x_i_store)
+        return x_i, x_i_store
+
+    def single_class_sample(self, n_sample, context, size, device, guide_w=0.0):
+        x_i = torch.randn(n_sample, *size).to(device)  # x_T ~ N(0, 1), sample initial noise
+        c_i = torch.Tensor([context]).to(torch.int64).to(device)  # context for us just cycles throught the mnist labels
         c_i = c_i.repeat(int(n_sample / c_i.shape[0]))
 
         # don't drop context at test time
