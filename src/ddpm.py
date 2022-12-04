@@ -56,8 +56,8 @@ class DDPM(nn.Module):
         noise = torch.randn_like(x)  # eps ~ N(0, 1)
 
         x_t = (
-                self.sqrtab[_ts, None, None, None] * x
-                + self.sqrtmab[_ts, None, None, None] * noise
+                self.sqrtab[_ts, None, None] * x
+                + self.sqrtmab[_ts, None, None] * noise
         )  # This is the x_t, which is sqrt(alphabar) x_0 + sqrt(1-alphabar) * eps
         # We should predict the "error term" from this x_t. Loss is what we return.
 
@@ -75,7 +75,7 @@ class DDPM(nn.Module):
         # where w>0 means more guidance
 
         x_i = torch.randn(n_sample, *size).to(device)  # x_T ~ N(0, 1), sample initial noise
-        c_i = torch.arange(0, 10).to(device)  # context for us just cycles throught the mnist labels
+        c_i = torch.arange(0, self.nn_model.n_classes).to(device)  # context for us just cycles throught the mnist labels
         c_i = c_i.repeat(int(n_sample / c_i.shape[0]))
 
         # don't drop context at test time
@@ -91,11 +91,11 @@ class DDPM(nn.Module):
         for i in range(self.n_T, 0, -1):
             print(f'sampling timestep {i}', end='\r')
             t_is = torch.tensor([i / self.n_T]).to(device)
-            t_is = t_is.repeat(n_sample, 1, 1, 1)
+            t_is = t_is.repeat(n_sample, 1, 1)
 
             # double batch
-            x_i = x_i.repeat(2, 1, 1, 1)
-            t_is = t_is.repeat(2, 1, 1, 1)
+            x_i = x_i.repeat(2, 1, 1)
+            t_is = t_is.repeat(2, 1, 1)
 
             z = torch.randn(n_sample, *size).to(device) if i > 1 else 0
 
