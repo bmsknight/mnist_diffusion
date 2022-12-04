@@ -10,7 +10,9 @@ class SineDataset(Dataset):
         index_array = np.array(range(length), dtype='float32')
         sin_array = np.zeros(shape=(n_classes, length), dtype='float32')
         for i in range(n_classes):
-            sin_array[i, :] = amplitude * np.sin(omega * (i + 1) * index_array)
+            signal = amplitude * np.sin(omega * (i + 1) * index_array)
+            noise = np.random.normal(0, 0.02, signal.shape)
+            sin_array[i, :] = signal + noise
         self.dataset = sin_array
         self.length = length
         self.n_classes = n_classes
@@ -22,7 +24,7 @@ class SineDataset(Dataset):
         class_label = item % self.n_classes
         idx = item // self.n_classes * self.window_size
         input_window = self.dataset[class_label, idx:idx + self.window_size]
-        input_window = input_window.reshape((1,-1))
+        input_window = input_window.reshape((1, -1))
         if self.transform:
             input_window = self.transform(input_window)
         return input_window, class_label
