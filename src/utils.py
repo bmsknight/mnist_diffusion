@@ -33,14 +33,14 @@ def remove_random_points_tensor(batch_data, missing_frac):
 
 class Evaluation:
     def __init__(self, predictions, test_set, mask):
-        self.missing_values = (mask-1)
+        self.missing_values = (1-mask)
         self.rmse_full = mean_squared_error(test_set,predictions,squared=False)
         self.mape_full = mean_absolute_percentage_error(test_set, predictions)
         self.mae_full = mean_absolute_error(test_set, predictions)
 
-        self.rmse_missing_only = mean_squared_error(test_set,predictions,squared=False,sample_weight=(mask - 1))
-        self.mape_missing_only = mean_absolute_percentage_error(test_set, predictions, sample_weight=(mask - 1))
-        self.mae_missing_only = mean_absolute_error(test_set, predictions, sample_weight=(mask - 1))
+        self.rmse_missing_only = mean_squared_error(test_set,predictions,squared=False,sample_weight=(1 - mask))
+        self.mape_missing_only = mean_absolute_percentage_error(test_set, predictions, sample_weight=(1 - mask))
+        self.mae_missing_only = mean_absolute_error(test_set, predictions, sample_weight=(1 - mask))
 
     def print(self):
         print("")
