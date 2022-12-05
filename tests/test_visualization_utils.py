@@ -1,11 +1,13 @@
 import numpy as np
 
 from src.sin_dataset import SineDataset
+from src.kaggle_daily_dataset import SimpleKaggleDataset
 from src.visualization_utils import plot_datapoint, plot_multiple_samples
 
 N_CLASSES = 5
 N_SAMPLES = 5
 dataset = SineDataset(window_size=24, transform=None, omega=np.pi / 24, n_classes=N_CLASSES)
+# dataset = SimpleKaggleDataset(path="data/load_history.csv",user_id=0,train=True,transform=None)
 
 
 def test_plot_datapoints():
@@ -29,5 +31,5 @@ def test_plot_multiple_samples():
 
 
 if __name__ == "__main__":
-    # test_plot_datapoints()
-    test_plot_multiple_samples()
+    test_plot_datapoints()
+    # test_plot_multiple_samples()

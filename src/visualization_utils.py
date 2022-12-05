@@ -11,6 +11,7 @@ def plot_datapoint(window, k):
     y_axis = ax.yaxis
     x_axis.set_label_text("time")
     y_axis.set_label_text("Amplitude")
+    window = window[0, :]
     line_plot, = ax.plot(window)
     line_plot.set_linewidth(2)
     line_plot.set_color("C1")
