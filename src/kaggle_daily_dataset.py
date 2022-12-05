@@ -21,6 +21,7 @@ class SimpleKaggleDataset(Dataset):
         dataset[K_HOUR_LIST] = dataset[K_HOUR_LIST].astype('float')
         dataset.sort_values(["READTS"], inplace=True)
         dataset.dropna(inplace=True)
+        self.max_val = max(dataset[K_HOUR_LIST].max())
         train_split_point = int(dataset.shape[0] * (1 - 0.2))
         if train:
             self.dataset = dataset.iloc[:train_split_point, :]
@@ -40,7 +41,7 @@ class SimpleKaggleDataset(Dataset):
 
     def __getitem__(self, item):
         input_window = self.dataset.iloc[item,:]
-        input_window = input_window.to_numpy(dtype='float32')
+        input_window = input_window.to_numpy(dtype='float32')/self.max_val
         input_window = input_window.reshape((1, 24))
         week = int(self.week.iloc[item])
         day = int(self.day.iloc[item])
