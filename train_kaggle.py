@@ -36,7 +36,7 @@ def main(config):
             optim.zero_grad()
             x = x.to(device)
             week, day = context
-            context = day.to(device)
+            context = (day-1).to(device)
 
             loss = ddpm(x, context)
             loss.backward()
