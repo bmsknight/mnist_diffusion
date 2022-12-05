@@ -42,6 +42,6 @@ class SimpleKaggleDataset(Dataset):
         input_window = self.dataset.iloc[item,:]
         input_window = input_window.to_numpy(dtype='float32')
         input_window = input_window.reshape((1, 24))
-        week = self.week.iloc[item]
-        day = self.day.iloc[item]
+        week = int(self.week.iloc[item])
+        day = int(self.day.iloc[item])
         return input_window, (week, day)
