@@ -218,3 +218,60 @@ class DDPM(nn.Module):
 
         x_i_store = np.array(x_i_store)
         return x_i, x_i_store
+
+    def multiple_sample_inpaint(self, input_batch, mask_batch, context_cls_batch, device, guide_w=0.0):
+        n_sample = input_batch.shape[0]
+        size = input_batch.shape
+
+        x_i = torch.randn(*size).to(device)  # x_T ~ N(0, 1), sample initial noise
+        c_i = torch.Tensor(context_cls_batch).to(torch.int64).to(device)
+
+        input_image = input_batch.to(device)
+        mask = mask_batch.to(device)
+
+        # don't drop context at test time
+        context_mask = torch.zeros_like(c_i).to(device)
+
+        # double the batch
+        c_i = c_i.repeat(2)
+        context_mask = context_mask.repeat(2)
+        context_mask[n_sample:] = 1.  # makes second half of batch context free
+
+        x_i_store = []  # keep track of generated steps in case want to plot something
+        print()
+        for i in range(self.n_T, 0, -1):
+            print(f'sampling timestep {i}', end='\r')
+            for u in range(10):
+                t_is = torch.tensor([i / self.n_T]).to(device)
+                t_is = t_is.repeat(n_sample, 1, 1)
+
+                # double batch
+                x_i = x_i.repeat(2, 1, 1)
+                t_is = t_is.repeat(2, 1, 1)
+
+                noise = torch.randn_like(input_image) if i > 1 else 0
+                x_known_i_minus_1 = (self.sqrtab[i] * input_image + self.sqrtmab[i] * noise)
+
+                z = torch.randn(*size).to(device) if i > 1 else 0
+
+                # split predictions and compute weighting
+                eps = self.nn_model(x_i, c_i, t_is, context_mask)
+                eps1 = eps[:n_sample]
+                eps2 = eps[n_sample:]
+                eps = (1 + guide_w) * eps1 - guide_w * eps2
+                x_unknown_i_minus_1 = x_i[:n_sample]
+                x_unknown_i_minus_1 = (
+                        self.oneover_sqrta[i] * (x_unknown_i_minus_1 - eps * self.mab_over_sqrtmab[i])
+                        + self.sqrt_beta_t[i] * z
+                )
+                x_i_minus_1 = mask * x_known_i_minus_1 + (1 - mask) * x_unknown_i_minus_1
+
+                if (u < 10) and (i >= 1):
+                    temp = torch.randn_like(x_i_minus_1)
+                    x_i = temp * self.sqrt_beta_t[i - 1] + x_i_minus_1 * torch.sqrt(self.alpha_t[i - 1])
+
+                if i % 20 == 0 or i == self.n_T or i < 8:
+                    x_i_store.append(x_i.detach().cpu().numpy())
+
+        x_i_store = np.array(x_i_store)
+        return x_i, x_i_store
