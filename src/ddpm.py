@@ -62,7 +62,7 @@ class DDPM(nn.Module):
         # We should predict the "error term" from this x_t. Loss is what we return.
 
         # dropout context with some probability
-        context_mask = torch.bernoulli(torch.zeros_like(c) + self.drop_prob).to(self.device)
+        context_mask = torch.bernoulli(torch.zeros(c.shape[0]) + self.drop_prob).to(self.device)
 
         # return MSE between added noise, and our predicted noise
         return self.loss_mse(noise, self.nn_model(x_t, c, _ts / self.n_T, context_mask))
@@ -75,15 +75,19 @@ class DDPM(nn.Module):
         # where w>0 means more guidance
 
         x_i = torch.randn(n_sample, *size).to(device)  # x_T ~ N(0, 1), sample initial noise
-        c_i = torch.arange(0, self.nn_model.n_classes).to(
-            device)  # context for us just cycles throught the mnist labels
-        c_i = c_i.repeat(int(n_sample / c_i.shape[0]))
+
+        c_i_day = torch.arange(0, 7).to(
+            device)  # context for us just cycles through the days
+        c_i_day = c_i_day.repeat(int(n_sample / c_i_day.shape[0]))
+
+        c_i_week = torch.randint(53,size=c_i_day.shape).to(device)
+        c_i = torch.stack([c_i_day,c_i_week], dim=-1)
 
         # don't drop context at test time
-        context_mask = torch.zeros_like(c_i).to(device)
+        context_mask = torch.zeros(c_i.shape[0]).to(device)
 
         # double the batch
-        c_i = c_i.repeat(2)
+        c_i = c_i.repeat(2,1)
         context_mask = context_mask.repeat(2)
         context_mask[n_sample:] = 1.  # makes second half of batch context free
 

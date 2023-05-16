@@ -2,6 +2,17 @@ import torch
 import torch.nn as nn
 
 
+class CyclicEncoder(nn.Module):
+    def __init__(self, max_len):
+        super().__init__()
+        self.inv_max_len = 1/max_len
+
+    def forward(self, x):
+        s = torch.sin(2 * torch.pi * x * self.inv_max_len)
+        c = torch.cos(2 * torch.pi * x * self.inv_max_len)
+        return torch.cat([s,c],dim=-1)
+
+
 class ResidualConvBlock(nn.Module):
     def __init__(self, in_channels, out_channels, is_res=False):
         super(ResidualConvBlock, self).__init__()
@@ -80,7 +91,7 @@ class EmbeddingFC(nn.Module):
 
 
 class ContextualUnet(nn.Module):
-    def __init__(self, in_channels, n_feat=256, n_classes=10):
+    def __init__(self, in_channels, n_feat=256, n_classes=(53, 7)):
         super(ContextualUnet, self).__init__()
 
         self.in_channels = in_channels
@@ -96,11 +107,11 @@ class ContextualUnet(nn.Module):
             nn.AvgPool1d(kernel_size=6),
             nn.GELU()
         )
-
+        self.pos = CyclicEncoder(n_classes)
         self.time_embed1 = EmbeddingFC(1, 2 * n_feat)
         self.time_embed2 = EmbeddingFC(1, 1 * n_feat)
-        self.context_embed1 = EmbeddingFC(n_classes, 2 * n_feat)
-        self.context_embed2 = EmbeddingFC(n_classes, 1 * n_feat)
+        self.context_embed1 = EmbeddingFC(2 * len(n_classes), 2 * n_feat)
+        self.context_embed2 = EmbeddingFC(2 * len(n_classes), 1 * n_feat)
 
         self.up0 = nn.Sequential(
             nn.ConvTranspose1d(2 * n_feat, 2 * n_feat, kernel_size=6, stride=6),
@@ -124,10 +135,10 @@ class ContextualUnet(nn.Module):
         down2 = self.down2(down1)
         hidden_vec = self.to_vec(down2)
 
-        context = nn.functional.one_hot(context, num_classes=self.n_classes).type(torch.float)
-
+        # context = nn.functional.one_hot(context, num_classes=self.n_classes).type(torch.float)
+        context = self.pos(context)
         context_mask = context_mask[:, None]
-        context_mask = context_mask.repeat(1, self.n_classes)
+        context_mask = context_mask.repeat(1, 2 * len(self.n_classes))
         context_mask = (-1 * (1 - context_mask))
         context = context * context_mask
 
