@@ -234,10 +234,10 @@ class DDPM(nn.Module):
         mask = mask_batch.to(device)
 
         # don't drop context at test time
-        context_mask = torch.zeros_like(c_i).to(device)
+        context_mask = torch.zeros(c_i.shape[0]).to(device)
 
         # double the batch
-        c_i = c_i.repeat(2)
+        c_i = c_i.repeat(2, 1)
         context_mask = context_mask.repeat(2)
         context_mask[n_sample:] = 1.  # makes second half of batch context free
 

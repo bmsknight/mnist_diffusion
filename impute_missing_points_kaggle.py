@@ -14,11 +14,12 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 dataset = SimpleKaggleDataset(path="data/load_history.csv", user_id=0, train=False, transform=None)
 train_loader = DataLoader(dataset, batch_size=config["BATCH_SIZE"])
 
-model = ContextualUnet(in_channels=1, n_feat=config["N_FEAT"], n_classes=config["N_CLASSES"])
+n_classes = torch.Tensor(config["N_CLASSES"]).to(device)
+model = ContextualUnet(in_channels=1, n_feat=config["N_FEAT"], n_classes=n_classes)
 ddpm = DDPM(nn_model=model, betas=(1e-4, 0.02), n_T=config["n_T"], device=device, drop_prob=0.1)
 ddpm.to(device=device)
 
-ddpm.load_state_dict(torch.load("model/kaggle_model_19.pth"))
+ddpm.load_state_dict(torch.load("model/kaggle_model_19_2.pth"))
 ddpm.eval()
 
 with torch.no_grad():
@@ -27,13 +28,13 @@ with torch.no_grad():
         preds = []
         masks = []
         for datapoint, context in train_loader:
-            week, day = context
-            day = day - 1
+            context = torch.stack(context, dim=-1)
+            context = (context - 1).to(device)
             datapoint_orig = datapoint.clone().detach()
 
             datapoint_n, mask = remove_random_points_tensor(datapoint, missing_frac=FRAC)
 
-            x_gen, x_gen_store = ddpm.multiple_sample_inpaint(datapoint_n,mask,day,device,guide_w=w)
+            x_gen, x_gen_store = ddpm.multiple_sample_inpaint(datapoint_n,mask,context,device,guide_w=w)
             temp_dp = datapoint_orig.squeeze()
             temp_dp = temp_dp * dataset.max_val
             temp_gen = x_gen.cpu().squeeze()
