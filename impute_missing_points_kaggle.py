@@ -4,12 +4,13 @@ from torch.utils.data import DataLoader
 from src.ddpm import DDPM
 from src.kaggle_daily_dataset import SimpleKaggleDataset
 from src.unet_1d import ContextualUnet
-from src.utils import remove_random_points, Evaluation, remove_random_points_tensor
+from src.utils import Evaluation, remove_random_points_tensor, remove_continuous_points_tensor
 
 config = yaml.safe_load(open("config.yml"))
 
 ws_test = [0.0, 0.5, 2.0]  # strength of generative guidance
-FRAC = 0.1
+FRAC = config["MISSING_FRAC"]
+HOURS = config["MISSING_HOURS"]
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 dataset = SimpleKaggleDataset(path="data/load_history.csv", user_id=0, train=False, transform=None)
 train_loader = DataLoader(dataset, batch_size=config["BATCH_SIZE"])
@@ -19,7 +20,7 @@ model = ContextualUnet(in_channels=1, n_feat=config["N_FEAT"], n_classes=n_class
 ddpm = DDPM(nn_model=model, betas=(1e-4, 0.02), n_T=config["n_T"], device=device, drop_prob=0.1)
 ddpm.to(device=device)
 
-ddpm.load_state_dict(torch.load("model/kaggle_model_19_2.pth"))
+ddpm.load_state_dict(torch.load(f"model/kaggle_model_19_user{config['USER_ID']}.pth"))
 ddpm.eval()
 
 with torch.no_grad():
@@ -32,7 +33,12 @@ with torch.no_grad():
             context = (context - 1).to(device)
             datapoint_orig = datapoint.clone().detach()
 
-            datapoint_n, mask = remove_random_points_tensor(datapoint, missing_frac=FRAC)
+            if config["MISSING_TYPE"] == "RANDOM":
+                datapoint_n, mask = remove_random_points_tensor(datapoint, missing_frac=FRAC)
+            elif config["MISSING_TYPE"] == "CONTINUOUS":
+                datapoint_n, mask = remove_continuous_points_tensor(datapoint, hours_to_remove=HOURS)
+            else:
+                raise ValueError("Unknown MISSING_TYPE")
 
             x_gen, x_gen_store = ddpm.multiple_sample_inpaint(datapoint_n,mask,context,device,guide_w=w)
             temp_dp = datapoint_orig.squeeze()

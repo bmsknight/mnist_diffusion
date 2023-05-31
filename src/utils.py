@@ -31,6 +31,24 @@ def remove_random_points_tensor(batch_data, missing_frac):
     return missing_batch, mask
 
 
+def remove_continuous_points_tensor(batch_data, hours_to_remove):
+    missing_batch = batch_data.squeeze()
+    mask = torch.ones_like(missing_batch)
+    last_start_point_removable = missing_batch.shape[1] - hours_to_remove
+    batch_size = mask.shape[0]
+    first_indices = torch.randint(low=0,high=last_start_point_removable,size=(batch_size,1))
+    indices = []
+    for i in range(hours_to_remove):
+        tmp = first_indices + i
+        indices.append(tmp)
+    indices = torch.cat(indices,dim=1)
+    missing_batch = missing_batch.scatter(dim=1, index=indices, value=0)
+    mask = mask.scatter(dim=1, index=indices, value=0)
+    missing_batch = missing_batch.unsqueeze(dim=1)
+    mask = mask.unsqueeze(dim=1)
+    return missing_batch, mask
+
+
 class Evaluation:
     def __init__(self, predictions, test_set, mask):
         self.missing_values = (1-mask)

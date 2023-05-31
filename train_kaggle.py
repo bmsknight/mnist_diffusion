@@ -21,7 +21,7 @@ def main(config):
 
     # transform = transforms.Compose([transforms.ToTensor()])
 
-    dataset = SimpleKaggleDataset(path="data/load_history.csv",user_id=0,train=True,transform=None)
+    dataset = SimpleKaggleDataset(path="data/load_history.csv",user_id=config["USER_ID"],train=True,transform=None)
     train_loader = DataLoader(dataset, batch_size=config["BATCH_SIZE"])
     optim = torch.optim.Adam(ddpm.parameters(), lr=config["LEARNING_RATE"])
     print("Start")
@@ -70,13 +70,13 @@ def main(config):
                 x_all = torch.cat([x_gen, x_real]).cpu()
                 image = plot_multiple_samples(x_all, rows=8, columns=7)
 
-                path = "output/" + f"image_ep{epoch}_w{w}.png"
+                path = "output/" + f"image_ep{epoch}_w{w}_user{config['USER_ID']}.png"
                 image.savefig(path)
                 plt.close(image)
                 print('saved image at ' + path)
 
         if epoch == int(config["EPOCHS"] - 1):
-            torch.save(ddpm.state_dict(), "model/" + f"kaggle_model_{epoch}.pth")
+            torch.save(ddpm.state_dict(), "model/" + f"kaggle_model_{epoch}_user{config['USER_ID']}.pth")
             print('saved model')
 
 
