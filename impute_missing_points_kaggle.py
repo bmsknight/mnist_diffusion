@@ -12,7 +12,7 @@ ws_test = [0.0, 0.5, 2.0]  # strength of generative guidance
 FRAC = config["MISSING_FRAC"]
 HOURS = config["MISSING_HOURS"]
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-dataset = SimpleKaggleDataset(path="data/load_history.csv", user_id=0, train=False, transform=None)
+dataset = SimpleKaggleDataset(path="data/load_history.csv", user_id=config['USER_ID'], train=False, transform=None)
 train_loader = DataLoader(dataset, batch_size=config["BATCH_SIZE"])
 
 n_classes = torch.Tensor(config["N_CLASSES"]).to(device)
