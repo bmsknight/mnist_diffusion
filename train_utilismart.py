@@ -76,7 +76,7 @@ def main(config):
                 print('saved image at ' + path)
 
         if epoch == int(config["EPOCHS"] - 1):
-            torch.save(ddpm.state_dict(), "model/" + f"kaggle_model_{epoch}_user{config['USER_ID']}.pth")
+            torch.save(ddpm.state_dict(), "model/" + f"util_model_{epoch}_user{config['USER_ID']}.pth")
             print('saved model')
 
 
