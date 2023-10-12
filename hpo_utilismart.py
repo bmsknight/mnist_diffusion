@@ -12,6 +12,10 @@ from src.unet_1d import ContextualUnet
 from src.utilismart_daily_dataset import UtiliSmartDailyDataset
 from src.utils import Evaluation, remove_random_points_tensor, remove_continuous_points_tensor
 
+# Fix for optuna accessing MySQLdb module which is not present
+# alternative packages are not present in compute canada
+# Hence need to use pymysql as below
+pymysql.install_as_MySQLdb()
 
 def main(config, run_id):
     ws_test = [0.0, 0.5, 2.0]  # strength of generative guidance
