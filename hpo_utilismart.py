@@ -1,4 +1,8 @@
-import matplotlib.pyplot as plt
+import argparse
+import time
+
+import numpy as np
+import optuna
 import torch
 import yaml
 from torch.utils.data import DataLoader
@@ -6,12 +10,10 @@ from torch.utils.data import DataLoader
 from src.ddpm import DDPM
 from src.unet_1d import ContextualUnet
 from src.utilismart_daily_dataset import UtiliSmartDailyDataset
-from src.visualization_utils import plot_multiple_samples
 from src.utils import Evaluation, remove_random_points_tensor, remove_continuous_points_tensor
 
 
-
-def main(config):
+def main(config, run_id):
     ws_test = [0.0, 0.5, 2.0]  # strength of generative guidance
     best_rmse = float("inf")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -28,7 +30,7 @@ def main(config):
     train_loader = DataLoader(dataset, batch_size=config["BATCH_SIZE"])
 
     test_dataset = UtiliSmartDailyDataset(path="data/utilismart_dataset2.csv", user_id=config["USER_ID"], train=False,
-                                     transform=None)
+                                          transform=None)
     test_loader = DataLoader(test_dataset, batch_size=config["BATCH_SIZE"])
 
     optim = torch.optim.Adam(ddpm.parameters(), lr=config["LEARNING_RATE"])
@@ -94,11 +96,44 @@ def main(config):
                 results.print()
 
                 if results.rmse_missing_only < best_rmse:
-                    torch.save(ddpm.state_dict(), "model/" + f"util_model_{epoch}_user{config['USER_ID']}.pth")
+                    torch.save(ddpm.state_dict(),
+                               "model/" + f"util_model_user{config['USER_ID']}_run_{run_id}_epoch_{epoch}.pth")
                     print(f'saved model of Epoch {epoch}, weight {w}')
                     best_rmse = results.rmse_missing_only
+                    best_epoch = epoch
+                    best_weight = w
+                    best_results = results
+
+    print("Best Results for guidance {} in epoch{}".format(best_weight, best_epoch))
+    best_results.print()
+    return best_rmse
+
+
+def objective(trial):
+    params = yaml.safe_load(open("config.yml"))
+    params["LEARNING_RATE"] = trial.suggest_loguniform("LEARNING_RATE", 1e-6, 1e-1)
+    params["BATCH_SIZE"] = trial.suggest_int("BATCH_SIZE", 32, 256)
+    # params["on_epoch_callbacks"] = [OptunaPruningCallback(trial, metric_name="val_loss")]
+
+    print(f"Initiating Run {trial.number} with params : {trial.params}")
+
+    rmse = main(params, str(trial.number))
+    return rmse
 
 
 if __name__ == "__main__":
-    params = yaml.safe_load(open("config.yml"))
-    main(params)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-o", "--optuna-db", type=str, help="Path to the Optuna Database file",
+                        )
+    parser.add_argument("-n", "--optuna-study-name", type=str, help="Name of the optuna study",
+                        )
+    args = parser.parse_args()
+    wait_time = np.random.randint(0, 10) * 3
+    print(f"Waiting for {wait_time} seconds before starting")
+    time.sleep(wait_time)
+    study = optuna.create_study(direction="minimize",
+                                study_name=args.optuna_study_name,
+                                storage=args.optuna_db,
+                                load_if_exists=True,
+                                )
+    study.optimize(objective, n_trials=1)
