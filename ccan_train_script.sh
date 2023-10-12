@@ -8,7 +8,7 @@
 #SBATCH --gpus=v100:1
 
 # Set the remote port and server
-REMOTEHOST=34.168.75.39
+REMOTEHOST=34.105.9.156
 REMOTEPORT=3306
 
 # Set the local params
