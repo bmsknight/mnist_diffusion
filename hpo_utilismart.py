@@ -64,7 +64,7 @@ def main(config):
                 test_set = []
                 preds = []
                 masks = []
-                for datapoint, context in train_loader:
+                for datapoint, context in test_loader:
                     context = torch.stack(context, dim=-1)
                     context = (context - 1).to(device)
                     datapoint_orig = datapoint.clone().detach()
